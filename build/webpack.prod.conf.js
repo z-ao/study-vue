@@ -23,8 +23,11 @@ const webpackConfig = merge(baseWebpackConfig, {
   },
   devtool: config.build.productionSourceMap ? config.build.devtool : false,
   output: {
+    //输出了路径
     path: config.build.assetsRoot,
+    //输出文件名
     filename: utils.assetsPath('js/[name].[chunkhash].js'),
+    //用来提取使用require.ensure方法中公共引入的模块
     chunkFilename: utils.assetsPath('js/[id].[chunkhash].js')
   },
   plugins: [
@@ -32,7 +35,7 @@ const webpackConfig = merge(baseWebpackConfig, {
     new webpack.DefinePlugin({
       'process.env': env
     }),
-    new UglifyJsPlugin({
+    new UglifyJsPlugin({ //压缩js
       uglifyOptions: {
         compress: {
           warnings: false
@@ -42,6 +45,7 @@ const webpackConfig = merge(baseWebpackConfig, {
       parallel: true
     }),
     // extract css into its own file
+    //独立分离css文件
     new ExtractTextPlugin({
       filename: utils.assetsPath('css/[name].[contenthash].css'),
       // Setting the following option to `false` will not extract CSS from codesplit chunks.
@@ -52,6 +56,7 @@ const webpackConfig = merge(baseWebpackConfig, {
     }),
     // Compress extracted CSS. We are using this plugin so that possible
     // duplicated CSS from different components can be deduped.
+    //样式压缩
     new OptimizeCSSPlugin({
       cssProcessorOptions: config.build.productionSourceMap
         ? { safe: true, map: { inline: false } }
@@ -64,21 +69,27 @@ const webpackConfig = merge(baseWebpackConfig, {
       filename: config.build.index,
       template: 'index.html',
       inject: true,
-      minify: {
-        removeComments: true,
-        collapseWhitespace: true,
-        removeAttributeQuotes: true
+      minify: { //生成文件压缩
+        removeComments: true, //移除注释
+        collapseWhitespace: true, //移除空格
+        removeAttributeQuotes: true //移除可以被移除的引号
         // more options:
         // https://github.com/kangax/html-minifier#options-quick-reference
       },
       // necessary to consistently work with multiple chunks via CommonsChunkPlugin
-      chunksSortMode: 'dependency'
+      chunksSortMode: 'dependency'  //控制块在添加到页面之前的排序风格
     }),
     // keep module.id stable when vendor modules does not change
+    //持久化缓存
     new webpack.HashedModuleIdsPlugin(),
     // enable scope hoisting
+    //webpack每个模块都会放入闭包函数中
+    //这会降低性能
+    //通过有联系的模块放入一个闭包函数里
+    //这里减少闭包函数数量从而加快JS的执行速度
     new webpack.optimize.ModuleConcatenationPlugin(),
     // split vendor js into its own file
+    //将公共的代码分离
     new webpack.optimize.CommonsChunkPlugin({
       name: 'vendor',
       minChunks (module) {
@@ -118,7 +129,10 @@ const webpackConfig = merge(baseWebpackConfig, {
     ])
   ]
 })
-
+//如果服务器开启压缩
+//生成gz结尾的压缩文件
+//服务器会优先获取请求资源的gz结尾的文件
+//然后在浏览器解压
 if (config.build.productionGzip) {
   const CompressionWebpackPlugin = require('compression-webpack-plugin')
 
@@ -137,7 +151,7 @@ if (config.build.productionGzip) {
     })
   )
 }
-
+//查看打包模块的详情
 if (config.build.bundleAnalyzerReport) {
   const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
   webpackConfig.plugins.push(new BundleAnalyzerPlugin())

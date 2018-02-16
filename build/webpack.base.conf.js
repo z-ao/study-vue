@@ -11,10 +11,16 @@ function resolve (dir) {
 const createLintingRule = () => ({
   test: /\.(js|vue)$/,
   loader: 'eslint-loader',
+  //eslint调用时机 有'pre'或'post'
+  //pre表示在其他loader调用之前使用格式检测
+  //post表示在其他loader调用之后使用格式检测
   enforce: 'pre',
+  //需要检查的目录
   include: [resolve('src'), resolve('test')],
   options: {
+    //优化输出错误提示的格式
     formatter: require('eslint-friendly-formatter'),
+    //是否需要输出警告
     emitWarning: !config.dev.showEslintErrorsInOverlay
   }
 })
@@ -32,8 +38,8 @@ module.exports = {
       : config.dev.assetsPublicPath
   },
   resolve: {
-    extensions: ['.js', '.vue', '.json'],
-    alias: {
+    extensions: ['.js', '.vue', '.json'],//引入这些文件不需代扩展名
+    alias: {//引入模块使用的别名
       'vue$': 'vue/dist/vue.esm.js',
       '@': resolve('src'),
     }
@@ -49,13 +55,13 @@ module.exports = {
       {
         test: /\.js$/,
         loader: 'babel-loader',
-        include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client')]
+        include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client')] //必须处理这些文件夹下的脚本
       },
       {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
         loader: 'url-loader',
         options: {
-          limit: 10000,
+          limit: 10000, //小于10000字节转化为base64
           name: utils.assetsPath('img/[name].[hash:7].[ext]')
         }
       },
@@ -77,7 +83,9 @@ module.exports = {
       }
     ]
   },
-  node: {
+  node: { //配置 polyfill 或 mock 来如何使用 NodeJS 环境 
+          // false 表示不提供node的这个方法,当调用这个方法时可能会报错
+          // empty  表示这个方法为空
     // prevent webpack from injecting useless setImmediate polyfill because Vue
     // source contains it (although only uses it if it's native).
     setImmediate: false,

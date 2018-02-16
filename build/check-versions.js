@@ -1,9 +1,9 @@
 'use strict'
-const chalk = require('chalk')
-const semver = require('semver')
+const chalk = require('chalk')  //定义终端字体的颜色
+const semver = require('semver')  //管理npm依赖包版本控制
 const packageConfig = require('../package.json')
-const shell = require('shelljs')
-
+const shell = require('shelljs')  //使用shell命令
+//执行命令
 function exec (cmd) {
   return require('child_process').execSync(cmd).toString().trim()
 }
@@ -11,19 +11,19 @@ function exec (cmd) {
 const versionRequirements = [
   {
     name: 'node',
-    currentVersion: semver.clean(process.version),
-    versionRequirement: packageConfig.engines.node
+    currentVersion: semver.clean(process.version),  //node版本
+    versionRequirement: packageConfig.engines.node  //package的node版本范围
   }
 ]
 
 if (shell.which('npm')) {
   versionRequirements.push({
     name: 'npm',
-    currentVersion: exec('npm --version'),
-    versionRequirement: packageConfig.engines.npm
+    currentVersion: exec('npm --version'),    //npm版本
+    versionRequirement: packageConfig.engines.npm //npm版本范围
   })
 }
-
+//检测版本
 module.exports = function () {
   const warnings = []
 
@@ -47,7 +47,7 @@ module.exports = function () {
       const warning = warnings[i]
       console.log('  ' + warning)
     }
-
+    //退出程序
     console.log()
     process.exit(1)
   }
