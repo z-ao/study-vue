@@ -6,5 +6,4 @@
 <p>开发环境的配置文件为<a href="../../build/webpack.dev.conf.js">build/webpack.dev.conf.js</a></p>
 <p>生产环境的配置文件为<a href="../../build/build.js">build/build.js</a></p>
 
-
 <aside>因为方便查看,分析直接写在配置文件的注释上</aside>

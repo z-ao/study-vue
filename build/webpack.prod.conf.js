@@ -28,7 +28,7 @@ const webpackConfig = merge(baseWebpackConfig, {
     //输出文件名
     filename: utils.assetsPath('js/[name].[chunkhash].js'),
     //用来提取使用require.ensure方法中公共引入的模块
-    chunkFilename: utils.assetsPath('js/[id].[chunkhash].js')
+    chunkFilename: utils.assetsPath('js/[name].[chunkhash].js')
   },
   plugins: [
     // http://vuejs.github.io/vue-loader/en/workflow/production.html

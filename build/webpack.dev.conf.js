@@ -64,6 +64,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     new webpack.HotModuleReplacementPlugin(), //启动热加载
     //显示更新的文件名在控制台
     new webpack.NamedModulesPlugin(), // HMR shows correct file names in console on update.
+    //出错不会阻塞,当结束后会报错
     new webpack.NoEmitOnErrorsPlugin(),
     // https://github.com/ampedandwired/html-webpack-plugin
     //生成html的插件
