@@ -1,65 +1,105 @@
 # vue权限管理思路
-> 使用vue做前后端分离时, vue单页面的获取权限时,   
-> 不会像larval、thinkphp获取权限那么方便,直接从数据库查询下权限,   
-> 获取权限需要调取接口,并等待接口返回后才做下一步操作,   
-> 每次渲染页面都调取权限的接口是不明智的,这会加长页面的渲染时间,   
-> 但如果在获取权限数据后,保存在本地时,要考虑性能、安全、和生存有效期.
 
-## 要点
-因为**业务员在后台对不同的用户配置不同的权限**,这个需求发生的概率非常大.   
-所以为了保证灵活性,不能在前端写个配置权限文件,不然每次更改权限都要修改配置文件,然后打包上传.   
-这一操作应该把权限的配置放置数据库,业务员通过后台修改数据库数据,   
-用户登录时从接口获取对应的权限配置.   
+### 背景
+随着前端技术的突飞猛进,很多公司做了前后端分离,   
+分离后,前端在权限管理这个块也要担当一定的责任.   
 
-## 后台操作
-虽然用户权限在前、中台体现,但是在后台赋予,所以做权限管理时,还要知道后台的相应流程.
+### 痛点
+* 获取权限需要通过接口,查询数据库,这要考虑网络延迟或者失败.   
+* 获取权限后,保存数据时,要考虑性能、安全、和生存有效期.
+
+### 调研总结
+在查阅了很多文章,大致两种处理情况.
+
+1. 接口获取整理好的路由、菜单权限.   
+(缺点:开发一个页面还要让后端配权限,分离感减少)
+2. 接口获取**用户角色**,在通过前端的"**角色权限表**"进行过滤.   
+(缺点:不能再后台修改角色权限和增加角色) 
+
+***
+
+思考:能不能通过**接口返回用户权限**,和**增删页面不需要通知后端**.
+
+### 后台操作
+权限在前、中台体现,但是在后台赋予.所以做权限管理时,要知道后台的相应流程.
 
 ***相应流程***
 
 <image src="./images/permission1.png" style="width: 70%; margin: 0 auto">
 
-简单来说就是用户是通过角色来赋予权限.
+简单来说就是用户是通过角色来赋予权限.    
+(也有其他情况时不需角色,直接赋予用户权限)
 
-## 接口数据
-从流程图看到,用户与角色和权限是递进关系,那么接口返回的是用户对应的角色?或是对应角色下的权限?   
-因为权限是这流程里最底层的一步,所以返回对应角色下的权限比较灵活.
+### 接口数据
+从流程图看到,权限是最底层的数据,所以返回对应角色下的权限比较灵活
 
-> 权限可以理解为是否能进行那个功能的操作,   
-> 技术层面来讲是是否可以调取那个接口
+> 注意   
+> 权限表里的主键时,有可能是1、2、3....这样的索引.   
+> 如果后端返回这样的数据,前端还需要看权限表相关的索引是什么意思   
+> 如果有上百个权限,交接起来是个噩梦
+
+一番思考过后,觉得让后端返回用户能调用的所有"**接口**"作为权限体现.
+
+***
+
+**因为**
+
+1. 在项目交接,接口文档肯定要看的
+2. 前端权限体现在用户能不能调用特定的接口,代码比较好理解.
 
 ```
 //设想的数据格式
 [
-	'/api/a/select', 
-	'/api/a/update', 
-	'/api/a/delete',
-	'/api/b/select', 
+	'/api/a/show', => 获取a模块数据
+	'/api/a/update', => 编辑a模块数据
+	'/api/a/delete', => 删除a模块数据
+	'/api/b/show', 
 	'/api/b/update',
-	'/api/c/select'
+	'/api/c/show'
 ]
+//真实是这样的,后端采用的RESTful架构
+[
+	'/api/a/{id}', => [GET]获取a模块的id信息
+	'/api/a/{id}/edit, => [GET]编辑a模块的id信息
+	'/api/a/{id}' => [DELETE]删除a模块的id信息
+	...
+	...
+]
+一个接口地址,它的意义由请求方法决定,
+有些接口地址的某些部分是动态写入的.
+
+所以要约定统一结构
+[
+	'/api/a/{id}|GET', => 获取a模块的id信息
+	'/api/a/{id}/edit|GET', => 编辑a模块的id信息
+	'/api/a/{id}|DELETE' => 删除a模块的id信息
+	...
+	...
+]
+动态写入的部分统一用{id}
+请求方法用"|"隔开,用大写
 ```
-## 权限的体现
-获取权限后,用户是否拥有权限的体现在
+后端返回的接口数组并不是真正的接口,    
+只是比权限表里的索引更加易懂权限标识,    
+且前端不需要看权限表,根据业务和接口文档进行配置.
 
-1. 是否能访问相应路由
-2. 是否显示相应导航
-3. 是否显示相应页面部分
+> 这里可能需要后端调整数据库结构
 
-## 获取权限
-### 时机
+### 获取权限
+#### 时机
 前端是在什么时候获取权限?   
 在用户登录、注册后?   
 如果是,那么后台修改了权限,用户如果勾选自动登录的话,那么一直都不会重新获取权限.   
 准确点来做,应该在**用户已登录状态时,但未获取权限**,才获取权限.   
 而获取权限地方是在**路由进入前**.
-### 存储
+#### 存储
 获取权限的时机条件1.用户已登录状态时, 2.未获取权限,   
 所以未获取权限就体现在没有存储权限,   
 且权限的配置会在路由的增加、菜单渲染、页面特定模块的渲染用到.   
 那么是存储在缓存里？还是本地?   
 存在缓存缺点是,如果数据量大,会影响到性能.   
 存在本地缺点是,如果后台设置新的权限,刷新页面不会获取新的权限,而是从本地获取.  
-其实可以分为两部份,有没获取**权限的标示存储在内存**中,**权限的数据存储在本地**.
+其实可以分为两部份,有没获取**权限标示**存储在内存中,**权限数据**存储在本地.
 
 ``` 
 //path filter/router.js
@@ -79,10 +119,19 @@ router.beforeEach((from, to, next) => {
 })
 ```
 
-## 路由权限
-路由分为两种,普通路由和权限路由   
-普通路由是没有登录状态能访问的,会在路由初始化使用,例如登录、404页面   
+
+### 权限体现
+获取权限后,用户是否拥有权限体现在
+
+1. 访问相应权限路由
+2. 显示相应导航
+3. 显示相应页面模块
+
+### 路由权限
+路由分为三种,普通路由和权限路由和"非"权限路由   
+普通路由是没有登录状态能访问的,会在路由初始化使用,例如404页面   
 权限路由是需要有相应的权限才能访问的,会动态添加,例如面板页面   
+"非"权限路由是拥有权限后不能访问的页面,例如登录  
 路由的配置格式与vue-router一致,所以创建vue-router实例时不用额外处理.
 
 ```
@@ -98,13 +147,15 @@ const commonRoutes = [
 		name: 'Forbidden'
 	},
 	{
+		path: '/',
+		redirect: { name: 'passwordLogin' }
+	}
+];
+const unPermissionRoutes = [
+	{
 		path: '/login/password', //密码登录
 		name: 'passwordLogin',
 		component: passwordLogin
-	},
-	{
-		path: '/',
-		redirect: { name: 'passwordLogin' }
 	}
 ];
 
@@ -119,7 +170,7 @@ const permissionRoutes = [
 				component: AIndex,
 				name: 'AIndex',
 				meta: {
-					permission: ['/api/a/select'],
+					permission: ['/api/a/{id}|GET'],
 					nav: {
 						title: 'a-详情'
 					}
@@ -130,7 +181,7 @@ const permissionRoutes = [
 				component: AEdit,
 				name: 'AEdit',
 				meta: {
-					permission: ['/api/a/update']
+					permission: ['/api/a/{id}/edit|GET']
 				}
 			}
 		]
@@ -145,7 +196,7 @@ const permissionRoutes = [
 				component: BIndex,
 				name: 'BIndex',
 				meta: {
-					permission: ['/api/b/select'],
+					permission: ['/api/b/{id}|GET'],
 					nav: {
 						title: 'b-详情'
 					}
@@ -156,7 +207,7 @@ const permissionRoutes = [
 				component: BEdit,
 				name: 'AEdit',
 				meta: {
-					permission: ['/api/b/update']
+					permission: ['/api/b/{id}/edit|GET']
 				}
 			}
 		]
@@ -166,7 +217,7 @@ const permissionRoutes = [
 		component: CIndex,
 		name: 'CIndex',
 		meta: {
-			permission: ['/api/c/select']
+			permission: ['/api/c/{id}|GET']
 		}
 	},
 	{
@@ -177,6 +228,7 @@ const permissionRoutes = [
 
 export commonRoutes;
 export permissionRoutes;
+export unPermissionRoutes;
 
 //path router/index.js
 import Router from 'vue-router'
@@ -185,7 +237,7 @@ import * as ALL_ROUTE from './router'
 
 const vueRouter = new Router({
     mode: 'history',
-    routes: ALL_ROUTE.commonRoutes,
+    routes: ALL_ROUTE.commonRoutes.concat(ALL_ROUTE.unPermissionRoutes),
 });
 
 export default vueRouter
@@ -256,8 +308,8 @@ function routerPermissionMap(permission, routes = ALL_ROUTE['permissionRoutes'])
 如果用户没有**发票**的权限,但它有**余额**和**收支明细**的权限,   
 那么它也能访问该页面.
 
-## 导航权限
-如果该导航不显,说明用户没有访问导航页面的权限,   
+### 导航权限
+如果导航不显示,则说明用户没有访问导航页面的权限,   
 所以导航也是权限的体现.
 
 ```
@@ -393,11 +445,20 @@ export default {
 3. 子组件通过meta的nav字段判断筛选出导航组件
 4. 如果该导航组件拥有子组件,进行递归渲染
 
-## 页面部分权限
-页面有些**部分是否显示**是通过权限来决定的,   
+## 页面模块权限
+页面有些**模块是否显示**是通过权限来决定的,   
 例如删除按钮,如果没有删除的权限便不显示. 
 
 ```
+
+// path a.vue
+<template>
+	<div>
+		....
+		<button v-auth="/api/a/{id}|DELETE" @click="deleteEvent"></button>
+	</div>
+</template>
+
 //path mixins/index.js
 
 import dataStore from 'dataStore'
@@ -410,7 +471,7 @@ export default {
 				const permission = dataStore.storage.get('permission');
 				if(!permission instanceof Array) return;
 				
-				if(!permission.includes(bind. value)){
+				if(!permission.includes(bind.value)){
 					//没有权限
 					el.parentElement.removeChild(el)
 				}
@@ -418,14 +479,6 @@ export default {
 		}
 	}
 }
-
-// path a.vue
-<template>
-	<div>
-		....
-		<button v-auth="/api/a/delete" @click="deleteEvent"></button>
-	</div>
-</template>
 
 ```
 
@@ -438,5 +491,12 @@ export default {
 ## 总结
 主要思想是 
   
-1. 权限的设置是可以通过**后台设置**,不是通过前端写入文件中,不然系统会不灵活.  
+1. 权限可以是通过**后台设置**,不是前端写入"权限表",不然系统会不灵活.  
 2. 在做路由权限时,不需要后端返回,不然增加一个页面,要让后端配置,这样降低前后端分离的思想.
+
+## 参考资料
+[https://juejin.im/post/591aa14f570c35006961acac]('https://juejin.im/post/591aa14f570c35006961acac')   
+
+[https://refined-x.com/2017/11/28/Vue2.0%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/]('https://refined-x.com/2017/11/28/Vue2.0%E7%94%A8%E6%88%B7%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/')   
+
+[https://www.zcfy.cc/article/role-based-authentication-using-vue-js-2-manoj-kumar-s-medium-3681.html]('https://www.zcfy.cc/article/role-based-authentication-using-vue-js-2-manoj-kumar-s-medium-3681.html')
