@@ -1,13 +1,22 @@
 <template>
   <div id="app">
-    <img src="./assets/logo.png">
-    <router-view/>
+    <span v-if="!count">{{ count }}</span>
+    <div v-else>ha</div>
+    <span @click="count++">add</span>
   </div>
 </template>
 
 <script>
     export default {
-        name: 'app'
+        name: 'app',
+        data() {
+            return{
+                count: 0
+            }
+        },
+        created() {
+            console.log('hah')
+        }
     }
 </script>
 
