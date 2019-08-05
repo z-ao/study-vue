@@ -20,6 +20,7 @@ import {
 
 export function initGlobalAPI (Vue: GlobalAPI) {
   // config
+  // 设置全局配置项
   const configDef = {}
   configDef.get = () => config
   if (process.env.NODE_ENV !== 'production') {
@@ -40,7 +41,8 @@ export function initGlobalAPI (Vue: GlobalAPI) {
     mergeOptions,
     defineReactive
   }
-
+  
+  // 设置响应式相关方法
   Vue.set = set
   Vue.delete = del
   Vue.nextTick = nextTick
@@ -59,11 +61,12 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   // this is used to identify the "base" constructor to extend all plain-object
   // components with in Weex's multi-instance scenarios.
   Vue.options._base = Vue
-
+  
+  // 注册内置的组件
   extend(Vue.options.components, builtInComponents)
 
-  initUse(Vue)
-  initMixin(Vue)
-  initExtend(Vue)
-  initAssetRegisters(Vue)
+  initUse(Vue) //定义use插件按装
+  initMixin(Vue) //定义mixin混入方法
+  initExtend(Vue) //定义extend 子类构造器
+  initAssetRegisters(Vue) //定义component directive filter方法
 }

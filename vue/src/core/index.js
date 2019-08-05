@@ -3,6 +3,7 @@ import { initGlobalAPI } from './global-api/index'
 import { isServerRendering } from 'core/util/env'
 import { FunctionalRenderContext } from 'core/vdom/create-functional-component'
 
+// 定义静态属性 extend、nextTick、set、delete、directive、filter、component、use、mixin、observable、version
 initGlobalAPI(Vue)
 
 Object.defineProperty(Vue.prototype, '$isServer', {
