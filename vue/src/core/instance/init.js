@@ -16,6 +16,7 @@ export function initMixin (Vue: Class<Component>) {
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this
     // a uid
+    // 创建实例id
     vm._uid = uid++
 
     let startTag, endTag
@@ -29,6 +30,7 @@ export function initMixin (Vue: Class<Component>) {
     // a flag to avoid this being observed
     vm._isVue = true
     // merge options
+    // 合并 options
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
@@ -49,14 +51,16 @@ export function initMixin (Vue: Class<Component>) {
     }
     // expose real self
     vm._self = vm
-    initLifecycle(vm)
-    initEvents(vm)
-    initRender(vm)
-    callHook(vm, 'beforeCreate')
-    initInjections(vm) // resolve injections before data/props
-    initState(vm)
-    initProvide(vm) // resolve provide after data/props
-    callHook(vm, 'created')
+    initLifecycle(vm) //初始化声明周期
+    initEvents(vm) //初始化事件 定义_event属性存储事件、处理父组件事件
+    initRender(vm) //初始化渲染 获取slots 定义$createElement
+    callHook(vm, 'beforeCreate') // 调用beforeCreate事件
+    //获取注入的inject
+    initInjections(vm) // resolve injections before data/props 
+    initState(vm) // 处理 prop method data computed watch 属性
+    // 因为 provide 可以是函数或对象 统一值
+    initProvide(vm) // resolve provide after data/props 
+    callHook(vm, 'created') // 调用created事件
 
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -66,7 +70,7 @@ export function initMixin (Vue: Class<Component>) {
     }
 
     if (vm.$options.el) {
-      vm.$mount(vm.$options.el)
+      vm.$mount(vm.$options.el) //挂载
     }
   }
 }
