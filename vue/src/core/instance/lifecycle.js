@@ -144,6 +144,7 @@ export function mountComponent (
   hydrating?: boolean
 ): Component {
   vm.$el = el
+  // 校验 引入runtime版本没有render函数时提示警告
   if (!vm.$options.render) {
     vm.$options.render = createEmptyVNode
     if (process.env.NODE_ENV !== 'production') {
@@ -164,8 +165,10 @@ export function mountComponent (
       }
     }
   }
+  // 调用beforemount钩子
   callHook(vm, 'beforeMount')
 
+  // 声明更新组件方法
   let updateComponent
   /* istanbul ignore if */
   if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
@@ -187,6 +190,7 @@ export function mountComponent (
     }
   } else {
     updateComponent = () => {
+      // render生成vnode 作为参数传入update
       vm._update(vm._render(), hydrating)
     }
   }
@@ -194,9 +198,10 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 生成 渲染watcher
   new Watcher(vm, updateComponent, noop, {
     before () {
-      if (vm._isMounted && !vm._isDestroyed) {
+      if (vm._isMounted && !vm._isDestroyed) { // 如果挂载了，且没有移除，调用beforeupdate
         callHook(vm, 'beforeUpdate')
       }
     }
@@ -207,6 +212,7 @@ export function mountComponent (
   // mounted is called for render-created child components in its inserted hook
   if (vm.$vnode == null) {
     vm._isMounted = true
+    // 调用mounted钩子
     callHook(vm, 'mounted')
   }
   return vm

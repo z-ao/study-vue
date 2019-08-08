@@ -35,7 +35,7 @@ extend(Vue.options.components, platformComponents) // Transition TransitionGroup
 // install platform patch function
 
 // 设置patch方法
-Vue.prototype.__patch__ = inBrowser ? patch : noop
+Vue.prototype. = inBrowser ? patch : noop
 
 // public mount method
 // 定义挂载方法
