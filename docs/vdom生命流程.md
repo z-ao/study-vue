@@ -1,30 +1,61 @@
-/* @flow */
+# VDom生命流程
 
-import config from '../config'
-import VNode, { createEmptyVNode } from './vnode'
-import { createComponent } from './create-component'
-import { traverse } from '../observer/traverse'
+## VDom产生
+Virtual DOM即 虚拟DOM 意思。其作用是 用JS对象去描述 一个DOM对象。   
+因为一个真实的DOM拥有大量属性，所以操作真实DOM成本较高。   
+使用VDom，对比操作前后dom描述 ，进行最小成本操作，提升性能。
 
-import {
-  warn,
-  isDef,
-  isUndef,
-  isTrue,
-  isObject,
-  isPrimitive,
-  resolveAsset
-} from '../util/index'
+## 流程
+初始化：创建新VDom对象 > 生成真实DOM > 插入Document里。   
+修改：创建新VDom对象 > 对比新旧Dom差异 > 进行最小成本修改。   
 
-import {
-  normalizeChildren,
-  simpleNormalizeChildren
-} from './helpers/index'
+### 创建新VDom对象
+我们知道Vue是使用，render函数里的createElement（函数）参数生成VDom。
 
-const SIMPLE_NORMALIZE = 1
-const ALWAYS_NORMALIZE = 2
+```
+// core/instance/render.js
+...
+...
+  Vue.prototype._render = function (): VNode {
+    const vm: Component = this
+    const { render, _parentVnode } = vm.$options
 
-// wrapper function for providing a more flexible interface
-// without getting yelled at by flow
+    ...
+    ...
+    try {
+	   ...
+	   ...
+      vnode = render.call(vm._renderProxy, vm.$createElement)
+    } catch (e) {
+      ...
+      ...
+    } finally {
+      currentRenderingInstance = null
+    }
+    ...
+    ...
+    return vnode
+  }
+```
+看到render里的createElement参数其实就是vm.$createElement
+
+```
+// core/instance/render.js
+import { createElement } from '../vdom/create-element'
+...
+...
+export function initRender (vm: Component) {
+  ...
+  ...
+  // 编译器处理后的render函数上使用
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
+  // 用户的render函数上使用
+  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+  ...
+  ...
+}
+
+// core/vdom/create-element.js
 export function createElement (
   context: Component,
   tag: any,
@@ -33,17 +64,21 @@ export function createElement (
   normalizationType: any,
   alwaysNormalize: boolean
 ): VNode | Array<VNode> {
-  if (Array.isArray(data) || isPrimitive(data)) { // 如果第二个参数实际的children，第二个到后面参数都往前移动
+  if (Array.isArray(data) || isPrimitive(data)) {
     normalizationType = children
     children = data
     data = undefined
   }
   if (isTrue(alwaysNormalize)) {
-    normalizationType = ALWAYS_NORMALIZE //如果是用户定义render 需要处理
+    normalizationType = ALWAYS_NORMALIZE
   }
   return _createElement(context, tag, data, children, normalizationType)
 }
+```
+因为用户使用的createElement方法，该函数第二参数是选填，所以做了参数序列化，   
+VDom实际使用_createElement方法构建。
 
+```
 export function _createElement (
   context: Component,
   tag?: string | Class<Component> | Function | Object,
@@ -53,34 +88,13 @@ export function _createElement (
 ): VNode | Array<VNode> {
   // 检验参数 data是响应式 或者 没有tag 返回空VNode
   if (isDef(data) && isDef((data: any).__ob__)) {
-    process.env.NODE_ENV !== 'production' && warn(
-      `Avoid using observed data object as vnode data: ${JSON.stringify(data)}\n` +
-      'Always create fresh vnode data objects in each render!',
-      context
-    )
+    ...
+    ...
     return createEmptyVNode()
   }
-  // object syntax in v-bind
-  if (isDef(data) && isDef(data.is)) {
-    tag = data.is
-  }
-  if (!tag) {
-    // in case of component :is set to falsy value
-    return createEmptyVNode()
-  }
-  // warn against non-primitive key
-  if (process.env.NODE_ENV !== 'production' &&
-    isDef(data) && isDef(data.key) && !isPrimitive(data.key)
-  ) {
-    if (!__WEEX__ || !('@binding' in data.key)) {
-      warn(
-        'Avoid using non-primitive value as key, ' +
-        'use string/number value instead.',
-        context
-      )
-    }
-  }
-  // support single function children as default scoped slot
+  ...
+  ...
+
   // 如果是函数式组件，第一个节点默认为scopedSlots
   if (Array.isArray(children) &&
     typeof children[0] === 'function'
@@ -89,13 +103,12 @@ export function _createElement (
     data.scopedSlots = { default: children[0] }
     children.length = 0
   }
-  // 根据是否参与编译器 选择将子项刨平的方法
   if (normalizationType === ALWAYS_NORMALIZE) {
     children = normalizeChildren(children)
   } else if (normalizationType === SIMPLE_NORMALIZE) {
     children = simpleNormalizeChildren(children)
   }
-  // 生成VNode
+  // 实例VNode
   let vnode, ns
   if (typeof tag === 'string') {
     let Ctor
@@ -140,33 +153,9 @@ export function _createElement (
     return createEmptyVNode()
   }
 }
-
-function applyNS (vnode, ns, force) {
-  vnode.ns = ns
-  if (vnode.tag === 'foreignObject') {
-    // use default namespace inside foreignObject
-    ns = undefined
-    force = true
-  }
-  if (isDef(vnode.children)) {
-    for (let i = 0, l = vnode.children.length; i < l; i++) {
-      const child = vnode.children[i]
-      if (isDef(child.tag) && (
-        isUndef(child.ns) || (isTrue(force) && child.tag !== 'svg'))) {
-        applyNS(child, ns, force)
-      }
-    }
-  }
-}
-
-// ref #5318
-// necessary to ensure parent re-render when deep bindings like :style and
-// :class are used on slot nodes
-function registerDeepBindings (data) {
-  if (isObject(data.style)) {
-    traverse(data.style)
-  }
-  if (isObject(data.class)) {
-    traverse(data.class)
-  }
-}
+```
+整个方法的逻辑是   
+1. 验证参数，如果不合格着返回空VNode。   
+2. 处理函数式组件作用域。   
+3. 根据render版本，选择将子项打平方法。   
+4. 生成并返回VNode。   
