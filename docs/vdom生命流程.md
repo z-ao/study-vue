@@ -75,7 +75,8 @@ export function createElement (
   return _createElement(context, tag, data, children, normalizationType)
 }
 ```
-因为用户使用的createElement方法，该函数第二参数是选填，所以做了参数序列化，   
+因为用户使用的createElement方法，该函数第二参数是选填，   
+所以做了参数序列化，增强开发体验     
 VDom实际使用_createElement方法构建。
 
 ```
@@ -158,4 +159,81 @@ export function _createElement (
 1. 验证参数，如果不合格着返回空VNode。   
 2. 处理函数式组件作用域。   
 3. 根据render版本，选择将子项打平方法。   
-4. 生成并返回VNode。   
+4. 生成并返回VNode。  
+
+#### 生成真实DOM
+生成完VNode后，Vue会通过Patch生成真实的Dom，更新到文档里。
+
+```
+  Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
+    const vm: Component = this
+    const prevEl = vm.$el
+    const prevVnode = vm._vnode
+    ...
+    ...
+    if (!prevVnode) {
+	   // 首次渲染dom
+      // initial render
+      vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
+    } else {
+      // updates
+      vm.$el = vm.__patch__(prevVnode, vnode)
+    }
+    ...
+    ...
+  }
+``` 
+
+因为第一次没有prevVnode，所以会走首次渲染的逻辑。
+我们再看下patch方法参数。
+
+```
+return function patch (oldVnode, vnode, hydrating, removeOnly) 
+```
+oldVnode = 真实dom   
+vnode = 虚拟dom   
+hydrating = removeOnly = false
+
+```
+return function patch (oldVnode, vnode, hydrating, removeOnly) {
+    ...
+    ...
+    if (isUndef(oldVnode)) {
+      ...
+      ...
+    } else {
+      //是否是真实dom
+      const isRealElement = isDef(oldVnode.nodeType)
+      if (!isRealElement && sameVnode(oldVnode, vnode)) {
+        // patch existing root node
+        patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly)
+      } else {
+        if (isRealElement) {
+          ...
+          ...
+          // 创建空Vnode
+          oldVnode = emptyNodeAt(oldVnode)
+        }
+
+        ...
+        ...
+        // 创建真实dom
+        createElm(
+          vnode,
+          insertedVnodeQueue,
+          // extremely rare edge case: do not insert if old element is in a
+          // leaving transition. Only happens when combining transition +
+          // keep-alive + HOCs. (#4590)
+          oldElm._leaveCb ? null : parentElm,
+          nodeOps.nextSibling(oldElm)
+        )
+
+        ...
+        ...
+      }
+    }
+
+    invokeInsertHook(vnode, insertedVnodeQueue, isInitialPatch)
+    return vnode.elm
+}
+```
